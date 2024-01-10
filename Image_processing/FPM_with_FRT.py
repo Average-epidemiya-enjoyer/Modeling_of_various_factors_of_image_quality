@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from Modeling_of_various_factors_of_image_quality.main import calculate_psf
 
 pupil_radius = 1.0
 wavelength = 550e-9
@@ -41,6 +42,7 @@ for epsilon in epsilons:
 
 unshielded_aperture = create_aperture(pupil_radius, 0, grid_size)
 unshielded_otf = calculate_otf(unshielded_aperture)
+unshielded_psf = calculate_psf(unshielded_otf)
 unshielded_mtf = calculate_mtf(unshielded_otf)
 plt.plot(unshielded_mtf, label='Без экранирования', color='purple', lw=1)
 
@@ -51,27 +53,24 @@ plt.legend()
 plt.grid(True)
 plt.show()
 
+fig, axes = plt.subplots(2, len(epsilons) + 1, figsize=(20, 8))
 
-def calculate_psf(otf):
-    psf = np.fft.ifftshift(np.fft.ifft2(np.fft.fftshift(otf)))
-    psf_normalized = np.abs(psf) ** 2
-    return psf_normalized / psf_normalized.max()
-
-
-fig, axes = plt.subplots(1, len(epsilons) + 1, figsize=(20, 4))
-
-unshielded_psf = calculate_psf(unshielded_otf)
-im = axes[0].imshow(unshielded_psf, extent=[-pupil_radius, pupil_radius, -pupil_radius, pupil_radius])
-axes[0].set_title('ФРТ без экранирования')
-plt.colorbar(im, ax=axes[0], fraction=0.046, pad=0.04)
+axes[0, 0].imshow(unshielded_aperture, cmap='gray', extent=[-pupil_radius, pupil_radius, -pupil_radius, pupil_radius])
+axes[0, 0].set_title('Апертура без экранирования')
 
 for i, epsilon in enumerate(epsilons):
     aperture = create_aperture(pupil_radius, epsilon, grid_size)
-    otf = calculate_otf(aperture)
+    axes[0, i + 1].imshow(aperture, cmap='gray', extent=[-pupil_radius, pupil_radius, -pupil_radius, pupil_radius])
+    axes[0, i + 1].set_title(f'Апертура с ε = {epsilon:.1f}')
+
+axes[1, 0].imshow(unshielded_psf, extent=[-pupil_radius, pupil_radius, -pupil_radius, pupil_radius])
+axes[1, 0].set_title('ФРТ без экранирования')
+
+for i, epsilon in enumerate(epsilons):
+    otf = calculate_otf(create_aperture(pupil_radius, epsilon, grid_size))
     psf = calculate_psf(otf)
-    im = axes[i + 1].imshow(psf, extent=[-pupil_radius, pupil_radius, -pupil_radius, pupil_radius])
-    axes[i + 1].set_title(f'ФРТ с ε = {epsilon:.1f}')
-    plt.colorbar(im, ax=axes[i + 1], fraction=0.046, pad=0.04)
+    axes[1, i + 1].imshow(psf, extent=[-pupil_radius, pupil_radius, -pupil_radius, pupil_radius])
+    axes[1, i + 1].set_title(f'ФРТ с ε = {epsilon:.1f}')
 
 plt.tight_layout()
 plt.show()
